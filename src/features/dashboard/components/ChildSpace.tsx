@@ -107,6 +107,18 @@ export default function ChildSpace() {
             🔒 Dispositivo vinculado a este perfil.
           </p>
 
+          {/* Live GPS & Battery Telemetry indicator */}
+          <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+              <Navigation className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
+              <span>GPS Ativo</span>
+            </div>
+            <div className="flex items-center gap-1 font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-md border border-emerald-200/60">
+              <Smartphone className="h-3.5 w-3.5 text-emerald-500" />
+              <span>{location?.batteryLevel ?? selectedChild.batteryLevel}% {location?.isCharging ? '⚡' : ''}</span>
+            </div>
+          </div>
+
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
             <button
               onClick={() => switchUserRole(null)}

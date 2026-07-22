@@ -9,14 +9,23 @@ export interface GPSLocation {
   city?: string;
   error?: string;
   batteryLevel?: number;
+  isCharging?: boolean;
 }
 
-export async function getDeviceBattery(): Promise<number | undefined> {
+export interface BatteryInfo {
+  level: number;
+  isCharging: boolean;
+}
+
+export async function getDeviceBattery(): Promise<BatteryInfo | undefined> {
   try {
     if ('getBattery' in navigator) {
       const battery: any = await (navigator as any).getBattery();
       if (battery && typeof battery.level === 'number') {
-        return Math.round(battery.level * 100);
+        return {
+          level: Math.round(battery.level * 100),
+          isCharging: !!battery.charging,
+        };
       }
     }
   } catch (e) {
@@ -52,16 +61,17 @@ export async function fetchIPLocation(): Promise<GPSLocation | null> {
 
 export function getAccuratePosition(): Promise<GPSLocation> {
   return new Promise(async (resolve) => {
-    const batLevel = await getDeviceBattery();
+    const batInfo = await getDeviceBattery();
     if (!("geolocation" in navigator)) {
       fetchIPLocation().then((ipLoc) => {
-        resolve(ipLoc ? { ...ipLoc, batteryLevel: batLevel } : {
+        resolve(ipLoc ? { ...ipLoc, batteryLevel: batInfo?.level, isCharging: batInfo?.isCharging } : {
           latitude: -23.55052,
           longitude: -46.633308,
           accuracy: 50,
           timestamp: Date.now(),
           source: 'fallback',
-          batteryLevel: batLevel
+          batteryLevel: batInfo?.level,
+          isCharging: batInfo?.isCharging
         });
       });
       return;
@@ -75,18 +85,20 @@ export function getAccuratePosition(): Promise<GPSLocation> {
           accuracy: pos.coords.accuracy,
           timestamp: pos.timestamp,
           source: 'device',
-          batteryLevel: batLevel
+          batteryLevel: batInfo?.level,
+          isCharging: batInfo?.isCharging
         });
       },
       async () => {
         const ipLoc = await fetchIPLocation();
-        resolve(ipLoc ? { ...ipLoc, batteryLevel: batLevel } : {
+        resolve(ipLoc ? { ...ipLoc, batteryLevel: batInfo?.level, isCharging: batInfo?.isCharging } : {
           latitude: -23.55052,
           longitude: -46.633308,
           accuracy: 100,
           timestamp: Date.now(),
           source: 'fallback',
-          batteryLevel: batLevel
+          batteryLevel: batInfo?.level,
+          isCharging: batInfo?.isCharging
         });
       },
       {
@@ -115,25 +127,53 @@ export function useDeviceGPS() {
   useEffect(() => {
     requestGPS();
 
+    let watchId: number | undefined;
     if ("geolocation" in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
+      watchId = navigator.geolocation.watchPosition(
         async (position) => {
-          const batLevel = await getDeviceBattery();
+          const batInfo = await getDeviceBattery();
           setLocation({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
             timestamp: position.timestamp,
             source: 'device',
-            batteryLevel: batLevel
+            batteryLevel: batInfo?.level,
+            isCharging: batInfo?.isCharging,
           });
         },
         () => {},
-        { enableHighAccuracy: true, maximumAge: 5000 }
+        { enableHighAccuracy: true, maximumAge: 3000 }
       );
-
-      return () => navigator.geolocation.clearWatch(watchId);
     }
+
+    // Real-time battery status listener
+    let batObj: any = null;
+    const handleBatEvent = () => {
+      if (batObj && typeof batObj.level === 'number') {
+        const lvl = Math.round(batObj.level * 100);
+        const charging = !!batObj.charging;
+        setLocation(prev => prev ? { ...prev, batteryLevel: lvl, isCharging: charging } : prev);
+      }
+    };
+
+    if ('getBattery' in navigator) {
+      (navigator as any).getBattery().then((bat: any) => {
+        batObj = bat;
+        bat.addEventListener('levelchange', handleBatEvent);
+        bat.addEventListener('chargingchange', handleBatEvent);
+      }).catch(() => {});
+    }
+
+    return () => {
+      if (watchId !== undefined && "geolocation" in navigator) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      if (batObj) {
+        batObj.removeEventListener('levelchange', handleBatEvent);
+        batObj.removeEventListener('chargingchange', handleBatEvent);
+      }
+    };
   }, []);
 
   return { location, isLocating, errorMsg, refreshGPS: requestGPS };
