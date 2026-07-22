@@ -89,6 +89,13 @@ export default function ParentDashboard() {
 
   const childLevelInfo = selectedChild ? calculateChildLevel(selectedChild.xp) : { level: 1, currentXp: 0, percentage: 0 };
 
+  // Auto-open emergency modal when SOS/panic is active
+  useEffect(() => {
+    if (isPanicActive) {
+      setShowEmergencyModal(true);
+    }
+  }, [isPanicActive]);
+
   // Fetch written address for active child
   useEffect(() => {
     let active = true;

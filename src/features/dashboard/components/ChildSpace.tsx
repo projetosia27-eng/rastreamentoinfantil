@@ -10,7 +10,7 @@ import {
 } from '../../../data/app-state-store';
 import { supabaseAuthService } from '../../../services/supabaseAuthService';
 import { calculateChildLevel } from '../../../domain/use-cases';
-import { useDeviceGPS } from '../../../services/gpsService';
+import { useDeviceGPS, getAccuratePosition } from '../../../services/gpsService';
 import TaskBoard from '../../tasks/components/TaskBoard';
 import RewardStore from '../../rewards/components/RewardStore';
 import { 
@@ -41,16 +41,26 @@ export default function ChildSpace() {
   // Sync real device GPS to selected child state when location updates
   useEffect(() => {
     if (selectedChild && location) {
-      updateChildLocation(selectedChild.id, location.latitude, location.longitude);
+      updateChildLocation(selectedChild.id, location.latitude, location.longitude, location.batteryLevel);
     }
-  }, [selectedChild?.id, location?.latitude, location?.longitude]);
+  }, [selectedChild?.id, location?.latitude, location?.longitude, location?.batteryLevel]);
 
   const childLevelInfo = selectedChild ? calculateChildLevel(selectedChild.xp) : { level: 1, currentXp: 0, percentage: 0 };
 
-  const handlePanicSOS = () => {
+  const handlePanicSOS = async () => {
     if (!selectedChild || sosCooldown) return;
-    triggerSOS(selectedChild.id);
     setSosCooldown(true);
+
+    try {
+      const pos = await getAccuratePosition();
+      if (pos) {
+        updateChildLocation(selectedChild.id, pos.latitude, pos.longitude, pos.batteryLevel);
+      }
+    } catch (e) {
+      console.warn('GPS fetch before SOS alert:', e);
+    }
+
+    triggerSOS(selectedChild.id);
     setTimeout(() => setSosCooldown(false), 5000); // 5s debounce protection
   };
 

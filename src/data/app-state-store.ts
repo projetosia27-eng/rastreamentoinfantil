@@ -3,7 +3,7 @@ import { Child, SafeZone, Task, Reward, Alert, AppTheme, UserRole, ActiveTab } f
 import { calculateDistance, isCoordinateInSafeZone } from '../domain/use-cases';
 import { LocalStorageRepository } from './local-storage-repository';
 import { supabaseDatabaseService } from '../services/supabaseDatabaseService';
-import { isConfigured } from '../services/supabaseClient';
+import { isConfigured, supabase } from '../services/supabaseClient';
 
 // Web Audio API siren alert controller for Panic SOS
 class AlertAudioManager {
@@ -204,16 +204,29 @@ export async function syncFromSupabase() {
       supabaseDatabaseService.getRewards(),
       supabaseDatabaseService.getAlerts()
     ]);
+
+    if (alerts) {
+      // Check for incoming emergency panic/SOS alerts from child's device
+      const unreadPanic = alerts.find(a => a.type === 'panic' && !a.isRead);
+      if (unreadPanic) {
+        if (!isPanicActiveSignal()) {
+          isPanicActiveSignal.set(true);
+          audioAlertManager.start();
+        }
+      }
+      alertsSignal.set(alerts);
+    }
     
-    if (children) childrenSignal.set(children);
+    if (children && children.length > 0) {
+      childrenSignal.set(children);
+    }
     if (zones) safeZonesSignal.set(zones);
     if (tasks) tasksSignal.set(tasks);
     if (rewards) rewardsSignal.set(rewards);
-    if (alerts) alertsSignal.set(alerts);
     
     // Auto-select first child if not in list
     const selectedId = selectedChildIdSignal();
-    if (children.length > 0 && !children.find(c => c.id === selectedId)) {
+    if (children && children.length > 0 && !children.find(c => c.id === selectedId)) {
       selectedChildIdSignal.set(children[0].id);
     }
     syncErrorSignal.set(null);
@@ -223,9 +236,25 @@ export async function syncFromSupabase() {
   }
 }
 
-// Automatically sync on module load if we have config
+// Automatically sync on module load and set up periodic polling + realtime channel if configured
 if (isConfigured) {
   syncFromSupabase();
+  setInterval(() => {
+    syncFromSupabase();
+  }, 3000);
+
+  if (supabase) {
+    try {
+      supabase
+        .channel('app-global-sync')
+        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+          syncFromSupabase();
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime channel subscription fallback:', e);
+    }
+  }
 }
 
 // LocalStorage persistence subscribers
@@ -276,17 +305,27 @@ export function createChild(name: string, avatar: string, fullChild?: Child) {
     protectionMode: 'standard',
   };
   childrenSignal.update(prev => [...prev, newChild]);
+  if (isConfigured) {
+    supabaseDatabaseService.upsertChild(newChild).catch(console.warn);
+  }
   return newChild.id;
 }
 
 export function updateChild(updatedChild: Child) {
   childrenSignal.update(prev => prev.map(c => c.id === updatedChild.id ? updatedChild : c));
+  if (isConfigured) {
+    supabaseDatabaseService.upsertChild(updatedChild).catch(console.warn);
+  }
 }
 
 export function updateProtectionMode(childId: string, mode: 'standard' | 'shopping' | 'loose_hand' | 'none') {
   childrenSignal.update(prev => prev.map(c => 
     c.id === childId ? { ...c, protectionMode: mode } : c
   ));
+  const child = childrenSignal().find(c => c.id === childId);
+  if (child && isConfigured) {
+    supabaseDatabaseService.upsertChild(child).catch(console.warn);
+  }
 }
 
 export function updateChildLocation(childId: string, lat: number, lng: number, forceBatteryChange?: number) {
@@ -380,6 +419,12 @@ export function updateChildLocation(childId: string, lat: number, lng: number, f
       };
     });
   });
+
+  // Sync child location update to Supabase
+  const updatedChild = childrenSignal().find(c => c.id === childId);
+  if (updatedChild && isConfigured) {
+    supabaseDatabaseService.upsertChild(updatedChild).catch(console.warn);
+  }
 }
 
 export function triggerAlert(newAlert: Alert) {
@@ -388,15 +433,24 @@ export function triggerAlert(newAlert: Alert) {
     isPanicActiveSignal.set(true);
     audioAlertManager.start();
   }
+  if (isConfigured) {
+    supabaseDatabaseService.upsertAlert(newAlert).catch(console.warn);
+  }
 }
 
 export function clearSOS() {
   isPanicActiveSignal.set(false);
   audioAlertManager.stop();
+  if (isConfigured) {
+    supabaseDatabaseService.markAlertsAsRead().catch(console.warn);
+  }
 }
 
 export function markAlertsAsRead() {
   alertsSignal.update(prev => prev.map(a => ({ ...a, isRead: true })));
+  if (isConfigured) {
+    supabaseDatabaseService.markAlertsAsRead().catch(console.warn);
+  }
 }
 
 export function deleteAlert(id: string) {

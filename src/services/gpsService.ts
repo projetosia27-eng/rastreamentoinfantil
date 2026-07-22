@@ -8,6 +8,21 @@ export interface GPSLocation {
   source?: 'device' | 'ip' | 'fallback';
   city?: string;
   error?: string;
+  batteryLevel?: number;
+}
+
+export async function getDeviceBattery(): Promise<number | undefined> {
+  try {
+    if ('getBattery' in navigator) {
+      const battery: any = await (navigator as any).getBattery();
+      if (battery && typeof battery.level === 'number') {
+        return Math.round(battery.level * 100);
+      }
+    }
+  } catch (e) {
+    // Battery API not supported or restricted
+  }
+  return undefined;
 }
 
 // Fetch IP geolocation as a fallback if HTML5 Geolocation is unavailable/restricted in iframe
@@ -36,15 +51,17 @@ export async function fetchIPLocation(): Promise<GPSLocation | null> {
 }
 
 export function getAccuratePosition(): Promise<GPSLocation> {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
+    const batLevel = await getDeviceBattery();
     if (!("geolocation" in navigator)) {
       fetchIPLocation().then((ipLoc) => {
-        resolve(ipLoc || {
+        resolve(ipLoc ? { ...ipLoc, batteryLevel: batLevel } : {
           latitude: -23.55052,
           longitude: -46.633308,
           accuracy: 50,
           timestamp: Date.now(),
-          source: 'fallback'
+          source: 'fallback',
+          batteryLevel: batLevel
         });
       });
       return;
@@ -57,17 +74,19 @@ export function getAccuratePosition(): Promise<GPSLocation> {
           longitude: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
           timestamp: pos.timestamp,
-          source: 'device'
+          source: 'device',
+          batteryLevel: batLevel
         });
       },
       async () => {
         const ipLoc = await fetchIPLocation();
-        resolve(ipLoc || {
+        resolve(ipLoc ? { ...ipLoc, batteryLevel: batLevel } : {
           latitude: -23.55052,
           longitude: -46.633308,
           accuracy: 100,
           timestamp: Date.now(),
-          source: 'fallback'
+          source: 'fallback',
+          batteryLevel: batLevel
         });
       },
       {
@@ -98,13 +117,15 @@ export function useDeviceGPS() {
 
     if ("geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
-        (position) => {
+        async (position) => {
+          const batLevel = await getDeviceBattery();
           setLocation({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
             timestamp: position.timestamp,
-            source: 'device'
+            source: 'device',
+            batteryLevel: batLevel
           });
         },
         () => {},
