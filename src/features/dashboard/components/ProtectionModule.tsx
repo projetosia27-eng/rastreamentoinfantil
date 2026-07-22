@@ -203,7 +203,7 @@ export default function ProtectionModule({ childId }: ProtectionModuleProps) {
                 Modo Mão Solta
               </h4>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-snug">
-                Dispara alarme no seu celular caso a criança se afaste mais de <span className="font-bold text-emerald-600 dark:text-emerald-400">10 metros</span>.
+                Dispara alarme no seu celular caso a criança se afaste a partir de <span className="font-bold text-emerald-600 dark:text-emerald-400">2 metros</span>.
               </p>
             </div>
             

@@ -121,7 +121,7 @@ export default function LooseHandModePanel({ child }: LooseHandModePanelProps) {
               <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 Modo Mão Solta
                 <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
-                  Perímetro 10m
+                  Perímetro {maxDistanceThreshold}m
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -149,13 +149,13 @@ export default function LooseHandModePanel({ child }: LooseHandModePanelProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {[5, 10, 15, 20, 30].map((val) => (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            {[2, 5, 10, 15, 20, 30].map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => setMaxDistanceThreshold(val)}
-                className={`flex-1 py-1 text-xs font-bold rounded-lg border transition-all ${
+                className={`flex-1 min-w-[36px] py-1 text-xs font-bold rounded-lg border transition-all ${
                   maxDistanceThreshold === val
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
