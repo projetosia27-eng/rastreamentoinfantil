@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Child } from '../../../domain/entities';
 import { ShoppingBag, Bluetooth, MapPin, Zap, Volume2, ShieldAlert } from 'lucide-react';
+import { triggerAlert } from '../../../data/app-state-store';
 
 interface ShoppingModePanelProps {
   child: Child;
@@ -11,8 +12,18 @@ export default function ShoppingModePanel({ child }: ShoppingModePanelProps) {
 
   const handleQuickAlert = () => {
     setIsAlertActive(true);
-    alert("Alerta rápido acionado! Notificação de volume máximo enviada.");
-    setTimeout(() => setIsAlertActive(false), 3000);
+    triggerAlert({
+      id: `alert-shopping-${Date.now()}`,
+      childId: child.id,
+      childName: child.name,
+      type: 'panic',
+      message: `🚨 MODO SHOPPING: Alerta de emergência acionado para ${child.name} em área movimentada!`,
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      isRead: false,
+      latitude: child.latitude,
+      longitude: child.longitude,
+    });
+    setTimeout(() => setIsAlertActive(false), 4000);
   };
 
   return (

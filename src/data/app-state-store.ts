@@ -260,12 +260,24 @@ if (isConfigured) {
 // LocalStorage persistence subscribers
 themeSignal.subscribe((val) => {
   LocalStorageRepository.set('gkids_theme', val);
-  if (val === 'dark') {
+  if (typeof document !== 'undefined') {
+    if (val === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
+});
+
+// Sync initial theme class to HTML element
+if (typeof document !== 'undefined') {
+  if (themeSignal() === 'dark') {
     document.documentElement.classList.add('dark');
   } else {
     document.documentElement.classList.remove('dark');
   }
-});
+}
+
 userRoleSignal.subscribe((val) => LocalStorageRepository.set('gkids_user_role', val));
 selectedChildIdSignal.subscribe((val) => LocalStorageRepository.set('gkids_sel_child_id', val));
 childrenSignal.subscribe((val) => LocalStorageRepository.set('gkids_children', val));
@@ -277,7 +289,15 @@ alertsSignal.subscribe((val) => LocalStorageRepository.set('gkids_alerts', val))
 // BUSINESS RULES / USE CASES TRIGGERS (CORE SYSTEM ACTIONS)
 
 export function toggleTheme() {
-  themeSignal.set(themeSignal() === 'light' ? 'dark' : 'light');
+  const nextTheme = themeSignal() === 'light' ? 'dark' : 'light';
+  themeSignal.set(nextTheme);
+  if (typeof document !== 'undefined') {
+    if (nextTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
 }
 
 export function switchUserRole(role: UserRole) {
