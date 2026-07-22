@@ -84,6 +84,7 @@ export const supabaseDatabaseService = {
     birth_date: child.birthDate,
     characteristics: child.characteristics,
     emergency_contact: child.emergencyContact,
+    phone: child.phone,
   }),
 
   mapChildFromDB: (db: any): Child => ({
@@ -101,6 +102,7 @@ export const supabaseDatabaseService = {
     birthDate: db.birth_date,
     characteristics: db.characteristics,
     emergencyContact: db.emergency_contact,
+    phone: db.phone,
   }),
 
   mapSafeZoneToDB: (zone: SafeZone) => ({

@@ -17,6 +17,7 @@ export interface Child {
   birthDate?: string;
   characteristics?: string;
   emergencyContact?: string;
+  phone?: string;
   deviceType?: DeviceType;
 }
 

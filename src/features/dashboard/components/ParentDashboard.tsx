@@ -62,7 +62,8 @@ import {
   LayoutDashboard,
   Crosshair,
   ArrowRight,
-  Activity
+  Activity,
+  Phone
 } from 'lucide-react';
 
 export default function ParentDashboard() {
@@ -241,6 +242,12 @@ export default function ParentDashboard() {
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-100 dark:border-indigo-900/50">
                       {(!selectedChild.deviceType || selectedChild.deviceType === 'smartwatch') ? 'Smartwatch 4G' : 'Celular'}
                     </span>
+                    {selectedChild.phone && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-100 dark:border-emerald-900/50">
+                        <Phone className="h-3 w-3 text-emerald-500" />
+                        {selectedChild.phone}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1">
                       <Battery className="h-3.5 w-3.5 text-emerald-500" />
                       <span>{selectedChild.batteryLevel}%</span>

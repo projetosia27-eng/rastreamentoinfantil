@@ -16,6 +16,7 @@ import ParentDashboard from './features/dashboard/components/ParentDashboard';
 import ChildSpace from './features/dashboard/components/ChildSpace';
 import ProfileSelection from './features/dashboard/components/ProfileSelection';
 import FamilyLinkingModal from './features/dashboard/components/FamilyLinkingModal';
+import ParentPinModal from './features/dashboard/components/ParentPinModal';
 import { 
   ShieldAlert, 
   Sun, 
@@ -47,6 +48,30 @@ export default function App() {
   const isLinked = useSignal(isDeviceLinkedSignal);
 
   const [showLinkingModal, setShowLinkingModal] = useState(false);
+  const [showParentPinModal, setShowParentPinModal] = useState(false);
+  const [pendingParentAction, setPendingParentAction] = useState<(() => void) | null>(null);
+
+  const handleSwitchProfile = () => {
+    if (role === 'parent') {
+      setPendingParentAction(() => () => switchUserRole(null));
+      setShowParentPinModal(true);
+    } else {
+      switchUserRole(null);
+    }
+  };
+
+  const handleLogout = () => {
+    if (role === 'parent') {
+      setPendingParentAction(() => async () => {
+        switchUserRole(null);
+        await supabaseAuthService.signOut();
+      });
+      setShowParentPinModal(true);
+    } else {
+      switchUserRole(null);
+      supabaseAuthService.signOut();
+    }
+  };
 
   useEffect(() => {
     if (role === 'child' && !isLinked) {
@@ -84,7 +109,7 @@ export default function App() {
             {/* Logo Brand */}
             <div className="flex items-center gap-2.5">
               <button 
-                onClick={() => switchUserRole(null)}
+                onClick={handleSwitchProfile}
                 className="h-10 w-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 relative hover:scale-105 transition-transform shrink-0"
                 title="Trocar perfil"
               >
@@ -118,7 +143,7 @@ export default function App() {
 
               {/* Role Toggle Switcher */}
               <button
-                onClick={() => switchUserRole(null)}
+                onClick={handleSwitchProfile}
                 className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition-all shadow-sm"
                 title="Trocar de perfil (Requer senha para acessar como Pai)"
               >
@@ -148,10 +173,7 @@ export default function App() {
               
               {/* Logout */}
               <button
-                onClick={async () => {
-                  switchUserRole(null);
-                  await supabaseAuthService.signOut();
-                }}
+                onClick={handleLogout}
                 className="p-2.5 rounded-xl border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 cursor-pointer transition-colors"
                 title="Sair"
               >
@@ -292,7 +314,7 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => switchUserRole(null)}
+                onClick={handleSwitchProfile}
                 className="flex flex-col items-center justify-center py-1.5 px-4 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-800 transition-all"
               >
                 <UserCheck className="h-4.5 w-4.5" />
@@ -307,6 +329,21 @@ export default function App() {
           isOpen={showLinkingModal}
           onClose={() => setShowLinkingModal(false)}
           userRole={role}
+        />
+
+        {/* Parent PIN Security Modal */}
+        <ParentPinModal
+          isOpen={showParentPinModal}
+          onClose={() => {
+            setShowParentPinModal(false);
+            setPendingParentAction(null);
+          }}
+          onSuccess={() => {
+            if (pendingParentAction) {
+              pendingParentAction();
+              setPendingParentAction(null);
+            }
+          }}
         />
 
         {/* Footer bar */}
