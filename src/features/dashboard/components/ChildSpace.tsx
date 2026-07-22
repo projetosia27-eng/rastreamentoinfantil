@@ -3,8 +3,6 @@ import { useSignal } from '../../../core/signals';
 import { 
   childrenSignal, 
   selectedChildIdSignal, 
-  setSelectedChildId, 
-  parentPinSignal, 
   familyPairingCodeSignal, 
   triggerSOS, 
   updateChildLocation 
@@ -23,29 +21,18 @@ import {
   AlertTriangle, 
   Navigation, 
   Smartphone, 
-  Lock, 
   ShieldCheck, 
-  X, 
-  KeyRound, 
-  CheckCircle2 
 } from 'lucide-react';
 
 export default function ChildSpace() {
   const children = useSignal(childrenSignal);
   const selectedChildId = useSignal(selectedChildIdSignal);
-  const parentPin = useSignal(parentPinSignal);
   const familyCode = useSignal(familyPairingCodeSignal);
   const { location, isLocating, errorMsg, refreshGPS } = useDeviceGPS();
 
   const selectedChild = children.find(c => c.id === selectedChildId) || children[0];
   const [activeTab, setActiveTab] = useState<'tasks' | 'rewards'>('tasks');
   const [sosCooldown, setSosCooldown] = useState(false);
-
-  // Parent PIN Security Modal state
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [inputPin, setInputPin] = useState('');
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [pinError, setPinError] = useState('');
 
   // Sync real device GPS to selected child state when location updates
   useEffect(() => {
@@ -61,31 +48,6 @@ export default function ChildSpace() {
     triggerSOS(selectedChild.id);
     setSosCooldown(true);
     setTimeout(() => setSosCooldown(false), 5000); // 5s debounce protection
-  };
-
-  const handleVerifyPin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanPin = inputPin.trim().toLowerCase();
-    if (cleanPin === parentPin.toLowerCase() || cleanPin === familyCode.toLowerCase() || cleanPin === '1234') {
-      setIsPinVerified(true);
-      setPinError('');
-    } else {
-      setPinError('PIN incorreto. Digite a senha dos pais (Padrão: 1234) ou Código de Pareamento.');
-    }
-  };
-
-  const handleSelectChildDevice = (childId: string) => {
-    setSelectedChildId(childId);
-    setShowPinModal(false);
-    setIsPinVerified(false);
-    setInputPin('');
-  };
-
-  const closePinModal = () => {
-    setShowPinModal(false);
-    setIsPinVerified(false);
-    setInputPin('');
-    setPinError('');
   };
 
   if (!selectedChild) {
@@ -108,7 +70,7 @@ export default function ChildSpace() {
       {/* LEFT COLUMN: HERO STATS AND PANIC BUTTON */}
       <div className="col-span-12 lg:col-span-4 space-y-5 lg:sticky lg:top-24 h-max">
         
-        {/* ISOLATED DEVICE CHILD BADGE & OPTIONAL PARENT LOCK */}
+        {/* ISOLATED DEVICE CHILD BADGE */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -125,20 +87,9 @@ export default function ChildSpace() {
                 </p>
               </div>
             </div>
-
-            {children.length > 1 && (
-              <button
-                onClick={() => setShowPinModal(true)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-colors shrink-0"
-                title="Trocar perfil do filho (Requer PIN dos Pais)"
-              >
-                <Lock className="h-3 w-3 text-indigo-500" />
-                <span>Trocar</span>
-              </button>
-            )}
           </div>
           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">
-            🔒 Cada celular é vinculado exclusivamente ao seu próprio filho.
+            🔒 Dispositivo vinculado exclusivamente a este perfil.
           </p>
         </div>
 
@@ -311,112 +262,6 @@ export default function ChildSpace() {
         </div>
 
       </div>
-
-      {/* PARENT PIN SECURITY MODAL FOR DEVICE RE-ASSIGNMENT */}
-      {showPinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
-            
-            <button
-              onClick={closePinModal}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl">
-                <Lock className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  Trocar Perfil deste Celular
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Protegido contra troca por crianças
-                </p>
-              </div>
-            </div>
-
-            {!isPinVerified ? (
-              <form onSubmit={handleVerifyPin} className="space-y-4">
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
-                  <p className="font-bold flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                    <KeyRound className="h-4 w-4" />
-                    Validação dos Pais Obrigatória
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed">
-                    Para selecionar outro filho neste celular, digite a senha/PIN dos Pais ou o Código de Pareamento (<span className="font-mono font-bold">GK-8492</span>).
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    PIN dos Pais (Padrão: 1234)
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={inputPin}
-                    onChange={(e) => setInputPin(e.target.value)}
-                    placeholder="Ex: 1234 ou GK-8492"
-                    className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-slate-800 dark:text-slate-200 text-center tracking-widest"
-                  />
-                </div>
-
-                {pinError && (
-                  <p className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/50 p-2.5 rounded-xl border border-red-200 dark:border-red-900">
-                    {pinError}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Desbloquear e Selecionar Filho
-                </button>
-              </form>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2 border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  PIN Confirmado! Selecione a criança que usa este celular:
-                </div>
-
-                <div className="space-y-2">
-                  {children.map((child) => {
-                    const isSelected = child.id === selectedChildId;
-                    return (
-                      <button
-                        key={child.id}
-                        onClick={() => handleSelectChildDevice(child.id)}
-                        className={`w-full flex items-center justify-between p-3.5 rounded-2xl border text-xs font-bold transition-all ${
-                          isSelected
-                            ? 'bg-amber-500 text-white border-transparent shadow-lg shadow-amber-500/20'
-                            : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{child.avatar}</span>
-                          <span className="text-sm font-black">{child.name}</span>
-                        </div>
-                        {isSelected && (
-                          <span className="px-2.5 py-1 bg-white/20 rounded-full text-[10px] font-extrabold uppercase">
-                            Atual
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
 
     </div>
   );

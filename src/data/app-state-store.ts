@@ -83,7 +83,7 @@ const defaultAlerts: Alert[] = [
 
 // Reactive Core App States (Hydrated from repository adapter)
 export const themeSignal = signal<AppTheme>(LocalStorageRepository.get('gkids_theme', 'light'));
-export const userRoleSignal = signal<UserRole>(null); // Force profile selection on every load
+export const userRoleSignal = signal<UserRole>(LocalStorageRepository.get('gkids_user_role', null) as UserRole); // Persist profile selection
 export const selectedChildIdSignal = signal<string>(LocalStorageRepository.get('gkids_sel_child_id', ''));
 export const parentPinSignal = signal<string>(LocalStorageRepository.get('gkids_parent_pin', '1234'));
 
@@ -97,44 +97,91 @@ export const activeTabSignal = signal<ActiveTab>('dashboard');
 export const familyPairingCodeSignal = signal<string>(LocalStorageRepository.get('gkids_family_code', 'GK-8492'));
 export const familyParentEmailSignal = signal<string>(LocalStorageRepository.get('gkids_family_email', 'projetosia27@gmail.com'));
 export const familyParentPhoneSignal = signal<string>(LocalStorageRepository.get('gkids_family_phone', '(11) 98765-4321'));
-export const isDeviceLinkedSignal = signal<boolean>(LocalStorageRepository.get('gkids_device_linked', true));
-export const linkedParentEmailSignal = signal<string>(LocalStorageRepository.get('gkids_linked_parent_email', 'projetosia27@gmail.com'));
+export const isDeviceLinkedSignal = signal<boolean>(LocalStorageRepository.get('gkids_device_linked', false));
+export const linkedParentEmailSignal = signal<string>(LocalStorageRepository.get('gkids_linked_parent_email', ''));
 
-export function linkDeviceWithParent(emailOrPhoneOrCode: string): { success: boolean; message: string } {
+import { supabaseAuthService } from '../services/supabaseAuthService';
+
+export async function initializeUserAuthLinking() {
+  try {
+    const user = await supabaseAuthService.getCurrentUser();
+    if (user) {
+      // Setup parent data based on the authenticated user
+      const userEmail = user.email || 'projetosia27@gmail.com';
+      familyParentEmailSignal.set(userEmail);
+      LocalStorageRepository.set('gkids_family_email', userEmail);
+      
+      // Auto generate a pairing code based on email
+      const userCode = 'GK-' + (userEmail.length * 100 + userEmail.charCodeAt(0)).toString();
+      familyPairingCodeSignal.set(userCode);
+      LocalStorageRepository.set('gkids_family_code', userCode);
+      
+      // Check if user has a linked parent email in metadata
+      const linkedEmail = user.user_metadata?.linked_parent_email;
+      if (linkedEmail) {
+        isDeviceLinkedSignal.set(true);
+        linkedParentEmailSignal.set(linkedEmail);
+        LocalStorageRepository.set('gkids_device_linked', true);
+        LocalStorageRepository.set('gkids_linked_parent_email', linkedEmail);
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing user auth linking:', error);
+  }
+}
+
+export async function linkDeviceWithParent(emailOrPhoneOrCode: string): Promise<{ success: boolean; message: string }> {
   const cleanInput = emailOrPhoneOrCode.trim().toLowerCase();
   const familyCode = familyPairingCodeSignal().toLowerCase();
   const parentEmail = familyParentEmailSignal().toLowerCase();
   const parentPhone = familyParentPhoneSignal().replace(/\D/g, '');
   const cleanInputPhone = cleanInput.replace(/\D/g, '');
 
+  let emailToLink = '';
+
   if (
     cleanInput === familyCode || 
     cleanInput === parentEmail || 
     (cleanInputPhone.length >= 8 && parentPhone.includes(cleanInputPhone))
   ) {
-    isDeviceLinkedSignal.set(true);
-    linkedParentEmailSignal.set(familyParentEmailSignal());
-    LocalStorageRepository.set('gkids_device_linked', true);
-    LocalStorageRepository.set('gkids_linked_parent_email', familyParentEmailSignal());
-    return { success: true, message: `Dispositivo vinculado com sucesso à conta dos pais (${familyParentEmailSignal()})!` };
-  } else if (cleanInput.includes('@') || cleanInput.length >= 4) {
-    // Flexible link for custom email or code
-    familyParentEmailSignal.set(cleanInput.includes('@') ? cleanInput : familyParentEmailSignal());
-    isDeviceLinkedSignal.set(true);
-    linkedParentEmailSignal.set(cleanInput);
-    LocalStorageRepository.set('gkids_device_linked', true);
-    LocalStorageRepository.set('gkids_linked_parent_email', cleanInput);
-    return { success: true, message: `Vínculo estabelecido com a conta (${cleanInput})!` };
+    emailToLink = familyParentEmailSignal();
+  } else if (cleanInputPhone.length >= 8 || cleanInput.length >= 4) {
+    // Flexible link for custom phone or code
+    emailToLink = cleanInput.includes('@') ? cleanInput : (cleanInputPhone.length >= 8 ? cleanInput : familyParentEmailSignal());
+    if (cleanInputPhone.length >= 8) {
+      familyParentPhoneSignal.set(cleanInput);
+      LocalStorageRepository.set('gkids_family_phone', cleanInput);
+    }
   } else {
-    return { success: false, message: 'Código ou e-mail inválido. Digite o e-mail cadastrado do pai ou o código de pareamento.' };
+    return { success: false, message: 'Código ou celular inválido. Digite o celular cadastrado do pai ou o código de pareamento.' };
   }
+
+  isDeviceLinkedSignal.set(true);
+  linkedParentEmailSignal.set(emailToLink);
+  LocalStorageRepository.set('gkids_device_linked', true);
+  LocalStorageRepository.set('gkids_linked_parent_email', emailToLink);
+
+  try {
+    // Persist in cloud (Supabase) so it survives cache clears
+    await supabaseAuthService.updateUserMetadata({ linked_parent_email: emailToLink });
+  } catch (error) {
+    console.error('Failed to save link to Supabase metadata', error);
+  }
+
+  return { success: true, message: `Vínculo estabelecido com a conta dos pais!` };
 }
 
-export function unlinkDevice() {
+export async function unlinkDevice() {
   isDeviceLinkedSignal.set(false);
   linkedParentEmailSignal.set('');
   LocalStorageRepository.set('gkids_device_linked', false);
   LocalStorageRepository.set('gkids_linked_parent_email', '');
+  
+  try {
+    await supabaseAuthService.updateUserMetadata({ linked_parent_email: null });
+  } catch (error) {
+    console.error('Failed to unlink in Supabase metadata', error);
+  }
 }
 
 export const childrenSignal = signal<Child[]>([]); // Start empty, wait for Supabase
@@ -206,6 +253,12 @@ export function toggleTheme() {
 
 export function switchUserRole(role: UserRole) {
   userRoleSignal.set(role);
+  if (role) {
+    LocalStorageRepository.set('gkids_user_role', role);
+  } else {
+    // If setting to null, remove it from local storage so they can pick again
+    localStorage.removeItem('gkids_user_role');
+  }
 }
 
 export function createChild(name: string, avatar: string, fullChild?: Child) {

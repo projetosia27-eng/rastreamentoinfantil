@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabaseAuthService } from '../services/supabaseAuthService';
 import { supabase, isConfigured } from '../services/supabaseClient';
+import { initializeUserAuthLinking } from '../data/app-state-store';
 import { Session, User } from '@supabase/supabase-js';
 import { Shield, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
 
@@ -30,6 +31,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     supabaseAuthService.getSession().then((session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session) initializeUserAuthLinking();
       setLoading(false);
     });
 
@@ -37,6 +39,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     const { unsubscribe } = supabaseAuthService.subscribeToAuthChanges((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session) initializeUserAuthLinking();
       setLoading(false);
     });
 

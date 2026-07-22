@@ -47,12 +47,17 @@ export const supabaseAuthService = {
    */
   getSession: async (): Promise<Session | null> => {
     if (!supabase) return null;
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.warn('Error getting session:', error);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.warn('Error getting session:', error);
+        return null;
+      }
+      return session;
+    } catch (e) {
+      console.warn('Failed to fetch session:', e);
       return null;
     }
-    return session;
   },
 
   /**
@@ -60,12 +65,17 @@ export const supabaseAuthService = {
    */
   getCurrentUser: async (): Promise<User | null> => {
     if (!supabase) return null;
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) {
-      console.warn('Error getting authenticated user:', error);
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.warn('Error getting authenticated user:', error);
+        return null;
+      }
+      return user;
+    } catch (e) {
+      console.warn('Failed to fetch user:', e);
       return null;
     }
-    return user;
   },
 
   signInWithGoogle: async () => {
@@ -75,6 +85,15 @@ export const supabaseAuthService = {
       options: {
         redirectTo: window.location.origin,
       }
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  updateUserMetadata: async (metadata: any) => {
+    if (!supabase) throw new Error('Supabase client is not initialized.');
+    const { data, error } = await supabase.auth.updateUser({
+      data: metadata
     });
     if (error) throw error;
     return data;

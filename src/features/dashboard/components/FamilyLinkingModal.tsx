@@ -43,17 +43,17 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
       `🛡️ *Guardião Kids* — Código de Pareamento Familiar\n\n` +
       `Para conectar o aplicativo ou relógio do seu filho ao painel dos pais, utilize:\n` +
       `• *Código de Pareamento:* ${familyCode}\n` +
-      `• *E-mail dos Pais:* ${parentEmail}\n\n` +
+      `• *Celular dos Pais:* ${parentPhone}\n\n` +
       `Acesse no seu celular!`
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
-  const handleLinkSubmit = (e: React.FormEvent) => {
+  const handleLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputCodeOrEmail.trim()) return;
 
-    const res = linkDeviceWithParent(inputCodeOrEmail);
+    const res = await linkDeviceWithParent(inputCodeOrEmail);
     if (res.success) {
       setStatusMessage({ type: 'success', text: res.message });
       setInputCodeOrEmail('');
@@ -62,8 +62,8 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
     }
   };
 
-  const handleUnlink = () => {
-    unlinkDevice();
+  const handleUnlink = async () => {
+    await unlinkDevice();
     setStatusMessage({ type: 'error', text: 'Dispositivo desvinculado dos pais.' });
   };
 
@@ -71,13 +71,15 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        {/* Close Button - Only show if not forced link */}
+        {!(userRole === 'child' && !isLinked) && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-6">
@@ -90,8 +92,8 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {userRole === 'parent' 
-                ? 'Conecte o aplicativo do seu filho ao seu e-mail e painel' 
-                : 'Conecte este celular ao e-mail cadastrado do seu pai ou mãe'}
+                ? 'Conecte o aplicativo do seu filho ao seu celular e painel' 
+                : 'Conecte este celular ao número cadastrado do seu pai ou mãe'}
             </p>
           </div>
         </div>
@@ -194,7 +196,7 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-sm">Dispositivo Vinculado aos Pais!</p>
                   <p className="mt-1">
-                    Este aplicativo está conectado à conta do seu pai/mãe: <span className="font-bold font-mono">{linkedEmail || parentEmail}</span>.
+                    Este aplicativo está conectado à conta do seu pai/mãe.
                   </p>
                   <button
                     onClick={handleUnlink}
@@ -211,7 +213,7 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
                 <div>
                   <p className="font-bold text-sm">Dispositivo sem Vínculo</p>
                   <p className="mt-1">
-                    Digite o e-mail cadastrado dos seus pais ou o código de 6 dígitos para sincronizar suas missões, localização e o botão SOS.
+                    Digite o número de celular cadastrado dos seus pais ou o código de 6 dígitos para sincronizar suas missões, localização e o botão SOS.
                   </p>
                 </div>
               </div>
@@ -221,18 +223,18 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
             <form onSubmit={handleLinkSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  E-mail do Pai / Mãe ou Código de Pareamento
+                  Número de Celular do Pai / Mãe ou Código de Pareamento
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="h-4 w-4" />
+                    <Phone className="h-4 w-4" />
                   </div>
                   <input
                     type="text"
                     required
                     value={inputCodeOrEmail}
                     onChange={(e) => setInputCodeOrEmail(e.target.value)}
-                    placeholder="Ex: projetosia27@gmail.com ou GK-8492"
+                    placeholder="Ex: (11) 99999-9999 ou GK-8492"
                     className="w-full pl-9 pr-3 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-medium text-slate-800 dark:text-slate-200"
                   />
                 </div>
@@ -258,7 +260,7 @@ export default function FamilyLinkingModal({ isOpen, onClose, userRole }: Family
             </form>
 
             <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-500 space-y-1">
-              <p className="font-bold text-slate-700 dark:text-slate-300">💡 Onde encontrar o e-mail ou código?</p>
+              <p className="font-bold text-slate-700 dark:text-slate-300">💡 Onde encontrar o celular ou código?</p>
               <p>Solicite aos seus pais que abram o aplicativo deles no <span className="font-semibold">Painel dos Pais</span> e cliquem no botão <span className="font-semibold">"Código de Pareamento"</span>.</p>
             </div>
 

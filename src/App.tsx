@@ -9,7 +9,8 @@ import {
   isPanicActiveSignal,
   clearSOS,
   syncErrorSignal,
-  activeTabSignal
+  activeTabSignal,
+  isDeviceLinkedSignal
 } from './data/app-state-store';
 import ParentDashboard from './features/dashboard/components/ParentDashboard';
 import ChildSpace from './features/dashboard/components/ChildSpace';
@@ -43,8 +44,15 @@ export default function App() {
   const isPanicActive = useSignal(isPanicActiveSignal);
   const syncError = useSignal(syncErrorSignal);
   const currentTab = useSignal(activeTabSignal);
+  const isLinked = useSignal(isDeviceLinkedSignal);
 
   const [showLinkingModal, setShowLinkingModal] = useState(false);
+
+  useEffect(() => {
+    if (role === 'child' && !isLinked) {
+      setShowLinkingModal(true);
+    }
+  }, [role, isLinked]);
 
   if (role === null) {
     return (
@@ -110,9 +118,9 @@ export default function App() {
 
               {/* Role Toggle Switcher */}
               <button
-                onClick={() => switchUserRole(role === 'parent' ? 'child' : 'parent')}
+                onClick={() => switchUserRole(null)}
                 className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition-all shadow-sm"
-                title="Clique para alternar entre perfil de Pai e perfil de Filho"
+                title="Trocar de perfil (Requer senha para acessar como Pai)"
               >
                 {role === 'parent' ? (
                   <>
@@ -141,7 +149,7 @@ export default function App() {
               {/* Logout */}
               <button
                 onClick={async () => {
-                  switchUserRole(null as any);
+                  switchUserRole(null);
                   await supabaseAuthService.signOut();
                 }}
                 className="p-2.5 rounded-xl border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 cursor-pointer transition-colors"
