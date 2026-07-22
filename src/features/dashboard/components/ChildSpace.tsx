@@ -5,8 +5,10 @@ import {
   selectedChildIdSignal, 
   familyPairingCodeSignal, 
   triggerSOS, 
-  updateChildLocation 
+  updateChildLocation,
+  switchUserRole
 } from '../../../data/app-state-store';
+import { supabaseAuthService } from '../../../services/supabaseAuthService';
 import { calculateChildLevel } from '../../../domain/use-cases';
 import { useDeviceGPS } from '../../../services/gpsService';
 import TaskBoard from '../../tasks/components/TaskBoard';
@@ -22,6 +24,8 @@ import {
   Navigation, 
   Smartphone, 
   ShieldCheck, 
+  UserCheck,
+  LogOut
 } from 'lucide-react';
 
 export default function ChildSpace() {
@@ -70,8 +74,8 @@ export default function ChildSpace() {
       {/* LEFT COLUMN: HERO STATS AND PANIC BUTTON */}
       <div className="col-span-12 lg:col-span-4 space-y-5 lg:sticky lg:top-24 h-max">
         
-        {/* ISOLATED DEVICE CHILD BADGE */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+        {/* ISOLATED DEVICE CHILD BADGE & PROFILE CONTROLS */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
@@ -88,9 +92,33 @@ export default function ChildSpace() {
               </div>
             </div>
           </div>
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">
-            🔒 Dispositivo vinculado exclusivamente a este perfil.
+
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+            🔒 Dispositivo vinculado a este perfil.
           </p>
+
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <button
+              onClick={() => switchUserRole(null)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-bold transition-all"
+              title="Trocar para o perfil dos Pais ou selecionar outro perfil"
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+              <span>Trocar Perfil</span>
+            </button>
+
+            <button
+              onClick={async () => {
+                switchUserRole(null);
+                await supabaseAuthService.signOut();
+              }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold transition-all"
+              title="Sair da conta e voltar ao login"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sair</span>
+            </button>
+          </div>
         </div>
 
         {/* HERO STATS AVATAR CARD */}
@@ -248,6 +276,35 @@ export default function ChildSpace() {
               </span>
             </button>
           ))}
+
+          <button 
+            onClick={() => switchUserRole(null)}
+            className="flex flex-col items-center justify-center w-full py-2 gap-1 text-slate-600 dark:text-slate-400 hover:text-indigo-600"
+            title="Trocar Perfil"
+          >
+            <div className="px-4 py-1 rounded-full">
+              <UserCheck className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-medium">
+              Perfil
+            </span>
+          </button>
+
+          <button 
+            onClick={async () => {
+              switchUserRole(null);
+              await supabaseAuthService.signOut();
+            }}
+            className="flex flex-col items-center justify-center w-full py-2 gap-1 text-red-500 hover:text-red-600"
+            title="Sair da Conta"
+          >
+            <div className="px-4 py-1 rounded-full">
+              <LogOut className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-medium">
+              Sair
+            </span>
+          </button>
         </div>
 
         {/* Dynamic component layout */}
