@@ -13,6 +13,7 @@ import {
   isPanicActiveSignal,
   updateProtectionMode,
   updateChildLocation,
+  updateChildBattery,
   activeTabSignal
 } from '../../../data/app-state-store';
 import { calculateChildLevel } from '../../../domain/use-cases';
@@ -255,18 +256,28 @@ export default function ParentDashboard() {
                         {selectedChild.phone}
                       </span>
                     )}
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] border ${
-                      selectedChild.batteryLevel > 50
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                        : selectedChild.batteryLevel >= 20
-                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                        : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-300 animate-pulse'
-                    }`}>
-                      <Battery className={`h-3.5 w-3.5 ${
-                        selectedChild.batteryLevel > 50 ? 'text-emerald-500' : selectedChild.batteryLevel >= 20 ? 'text-amber-500' : 'text-red-500'
-                      }`} />
-                      <span>{selectedChild.batteryLevel}% Bateria</span>
-                    </span>
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newLevel = selectedChild.batteryLevel <= 20 ? 85 : 15;
+                          updateChildBattery(selectedChild.id, newLevel);
+                        }}
+                        title="Clique para simular alteração de bateria em tempo real (ex: Bateria Fraca 15%)"
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] border cursor-pointer hover:scale-105 transition-all ${
+                          selectedChild.batteryLevel > 50
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                            : selectedChild.batteryLevel >= 20
+                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                            : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-300 animate-pulse'
+                        }`}
+                      >
+                        <Battery className={`h-3.5 w-3.5 ${
+                          selectedChild.batteryLevel > 50 ? 'text-emerald-500' : selectedChild.batteryLevel >= 20 ? 'text-amber-500' : 'text-red-500'
+                        }`} />
+                        <span>{selectedChild.batteryLevel}% Bateria (Ajustar)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

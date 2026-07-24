@@ -6,6 +6,7 @@ import {
   familyPairingCodeSignal, 
   triggerSOS, 
   updateChildLocation,
+  updateChildBattery,
   switchUserRole
 } from '../../../data/app-state-store';
 import { supabaseAuthService } from '../../../services/supabaseAuthService';
@@ -44,6 +45,35 @@ export default function ChildSpace() {
       updateChildLocation(selectedChild.id, location.latitude, location.longitude, location.batteryLevel);
     }
   }, [selectedChild?.id, location?.latitude, location?.longitude, location?.batteryLevel]);
+
+  // Dedicated real battery sensor detection for child device
+  useEffect(() => {
+    if (!selectedChild) return;
+    
+    let batObj: any = null;
+    const syncBattery = (battery: any) => {
+      if (battery && typeof battery.level === 'number') {
+        const pct = Math.round(battery.level * 100);
+        updateChildBattery(selectedChild.id, pct);
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+      (navigator as any).getBattery().then((bat: any) => {
+        batObj = bat;
+        syncBattery(bat);
+        bat.addEventListener('levelchange', () => syncBattery(bat));
+        bat.addEventListener('chargingchange', () => syncBattery(bat));
+      }).catch(console.warn);
+    }
+
+    return () => {
+      if (batObj) {
+        batObj.removeEventListener('levelchange', () => syncBattery(batObj));
+        batObj.removeEventListener('chargingchange', () => syncBattery(batObj));
+      }
+    };
+  }, [selectedChild?.id]);
 
   const childLevelInfo = selectedChild ? calculateChildLevel(selectedChild.xp) : { level: 1, currentXp: 0, percentage: 0 };
 
@@ -108,14 +138,47 @@ export default function ChildSpace() {
           </p>
 
           {/* Live GPS & Battery Telemetry indicator */}
-          <div className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
-            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
-              <Navigation className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
-              <span>GPS Ativo</span>
+          <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                <Navigation className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
+                <span>GPS Tempo Real</span>
+              </div>
+              <div className={`flex items-center gap-1 font-extrabold px-2.5 py-0.5 rounded-md border ${
+                selectedChild.batteryLevel > 50
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200/60'
+                  : selectedChild.batteryLevel >= 20
+                  ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border-amber-200/60'
+                  : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60 border-red-200/60 animate-pulse'
+              }`}>
+                <Smartphone className="h-3.5 w-3.5" />
+                <span>{selectedChild.batteryLevel}% Bateria {location?.isCharging ? '⚡' : ''}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-md border border-emerald-200/60">
-              <Smartphone className="h-3.5 w-3.5 text-emerald-500" />
-              <span>{location?.batteryLevel ?? selectedChild.batteryLevel}% {location?.isCharging ? '⚡' : ''}</span>
+
+            {/* Quick Battery Level Adjuster for Testing & Real-time Sync */}
+            <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                  ⚡ Carga da Bateria (Ajustar / Testar):
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {[15, 30, 50, 75, 100].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => updateChildBattery(selectedChild.id, level)}
+                    className={`flex-1 py-0.5 text-[10px] font-bold rounded border transition-all ${
+                      selectedChild.batteryLevel === level
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {level}%
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

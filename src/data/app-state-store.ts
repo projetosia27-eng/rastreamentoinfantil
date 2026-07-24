@@ -348,6 +348,29 @@ export function updateProtectionMode(childId: string, mode: 'standard' | 'shoppi
   }
 }
 
+export function updateChildBattery(childId: string, batteryLevel: number) {
+  childrenSignal.update(prev => prev.map(c => {
+    if (c.id !== childId) return c;
+    const oldLevel = c.batteryLevel;
+    if (batteryLevel < 20 && oldLevel >= 20) {
+      triggerAlert({
+        id: `alert-bat-${Date.now()}`,
+        childId: c.id,
+        childName: c.name,
+        type: 'battery_low',
+        message: `🔋 Bateria Fraca: O dispositivo de ${c.name} está com ${batteryLevel}%!`,
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        isRead: false,
+      });
+    }
+    return { ...c, batteryLevel };
+  }));
+  const updatedChild = childrenSignal().find(c => c.id === childId);
+  if (updatedChild && isConfigured) {
+    supabaseDatabaseService.upsertChild(updatedChild).catch(console.warn);
+  }
+}
+
 export function updateChildLocation(childId: string, lat: number, lng: number, forceBatteryChange?: number) {
   childrenSignal.update(prev => {
     return prev.map(child => {
