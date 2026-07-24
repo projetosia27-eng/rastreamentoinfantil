@@ -26,6 +26,7 @@ import SupabaseDashboard from '../../supabase/components/SupabaseDashboard';
 import ChildManagerModal from './ChildManagerModal';
 import ProtectionModule from './ProtectionModule';
 import EmergencyFlowModal from './EmergencyFlowModal';
+import GuardianNetworkModal from './GuardianNetworkModal';
 import MissingChildPosterModal from '../../community/components/MissingChildPosterModal';
 import CommunityModule from '../../community/components/CommunityModule';
 import { useDeviceGPS, getAccuratePosition } from '../../../services/gpsService';
@@ -64,7 +65,8 @@ import {
   Crosshair,
   ArrowRight,
   Activity,
-  Phone
+  Phone,
+  HeartHandshake
 } from 'lucide-react';
 
 export default function ParentDashboard() {
@@ -83,6 +85,7 @@ export default function ParentDashboard() {
   const [childToEditId, setChildToEditId] = useState<string | null>(null);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [showPosterModal, setShowPosterModal] = useState(false);
+  const [showGuardianModal, setShowGuardianModal] = useState(false);
   const [syncGpsText, setSyncGpsText] = useState<string | null>(null);
   const [currentAddressText, setCurrentAddressText] = useState<string>('Carregando endereço...');
 
@@ -298,7 +301,7 @@ export default function ParentDashboard() {
               <p className="text-[10px] text-slate-400 font-mono">Coordenadas: {selectedChild.latitude.toFixed(5)}, {selectedChild.longitude.toFixed(5)}</p>
             </div>
 
-            {/* Emergency & Poster Buttons */}
+            {/* Emergency, Poster & Guardian Network Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
               <button
                 onClick={() => setShowEmergencyModal(true)}
@@ -316,6 +319,14 @@ export default function ParentDashboard() {
                 Gerar Cartaz & Alerta
               </button>
             </div>
+
+            <button
+              onClick={() => setShowGuardianModal(true)}
+              className="w-full mt-2 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 dark:text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all border border-indigo-200/60 dark:border-indigo-900/40 shadow-xs"
+            >
+              <HeartHandshake className="h-4 w-4 text-indigo-500" />
+              Rede de Guardiões da Família (Avós, Tios, Escola)
+            </button>
           </div>
         )}
 
@@ -630,6 +641,13 @@ export default function ParentDashboard() {
           child={selectedChild}
           onClose={() => setShowPosterModal(false)}
           onPublishToCommunity={() => setActiveTab('community')}
+        />
+      )}
+
+      {showGuardianModal && (
+        <GuardianNetworkModal
+          isOpen={showGuardianModal}
+          onClose={() => setShowGuardianModal(false)}
         />
       )}
     </div>

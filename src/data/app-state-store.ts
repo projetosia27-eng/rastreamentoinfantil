@@ -1,5 +1,35 @@
 import { signal, Signal } from '../core/signals';
-import { Child, SafeZone, Task, Reward, Alert, AppTheme, UserRole, ActiveTab } from '../domain/entities';
+import { Child, SafeZone, Task, Reward, Alert, AppTheme, UserRole, ActiveTab, SecondaryGuardian } from '../domain/entities';
+
+// Default seed guardians
+const defaultSecondaryGuardians: SecondaryGuardian[] = [
+  { id: 'guard-1', name: 'Maria Silva (Mãe)', relationship: 'Mãe', phone: '(11) 99888-7777', role: 'principal', isNotifiedOnSOS: true },
+  { id: 'guard-2', name: 'João Silva (Pai)', relationship: 'Pai', phone: '(11) 98765-4321', role: 'principal', isNotifiedOnSOS: true },
+  { id: 'guard-3', name: 'Dona Carmen (Avó)', relationship: 'Avó/Avô', phone: '(11) 97777-1111', role: 'secundario', isNotifiedOnSOS: true },
+  { id: 'guard-4', name: 'Escola Guardião (Secretaria)', relationship: 'Escola', phone: '(11) 3333-4444', role: 'emergencia', isNotifiedOnSOS: false },
+];
+
+export const secondaryGuardiansSignal = signal<SecondaryGuardian[]>(
+  LocalStorageRepository.get('gkids_guardians', defaultSecondaryGuardians)
+);
+
+secondaryGuardiansSignal.subscribe((val) => LocalStorageRepository.set('gkids_guardians', val));
+
+export function addSecondaryGuardian(guardian: Omit<SecondaryGuardian, 'id'>) {
+  const newGuardian: SecondaryGuardian = {
+    ...guardian,
+    id: `guard-${Date.now()}`
+  };
+  secondaryGuardiansSignal.update(prev => [...prev, newGuardian]);
+}
+
+export function deleteSecondaryGuardian(id: string) {
+  secondaryGuardiansSignal.update(prev => prev.filter(g => g.id !== id));
+}
+
+export function toggleGuardianSOS(id: string) {
+  secondaryGuardiansSignal.update(prev => prev.map(g => g.id === id ? { ...g, isNotifiedOnSOS: !g.isNotifiedOnSOS } : g));
+}
 import { calculateDistance, isCoordinateInSafeZone } from '../domain/use-cases';
 import { LocalStorageRepository } from './local-storage-repository';
 import { supabaseDatabaseService } from '../services/supabaseDatabaseService';
@@ -632,6 +662,7 @@ export function triggerSOS(childId: string) {
     isRead: false,
     latitude: child.latitude,
     longitude: child.longitude,
+    hasAudio: true,
   });
 }
 

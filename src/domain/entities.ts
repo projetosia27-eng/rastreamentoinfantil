@@ -53,6 +53,25 @@ export interface Reward {
   isApproved: boolean; // Approved by parent to claim
 }
 
+export interface SecondaryGuardian {
+  id: string;
+  name: string;
+  relationship: string;
+  phone: string;
+  role: 'principal' | 'secundario' | 'emergencia';
+  isNotifiedOnSOS: boolean;
+}
+
+export interface EmergencyAudioLog {
+  id: string;
+  alertId: string;
+  childId: string;
+  timestamp: string;
+  durationSeconds: number;
+  audioUrl?: string;
+  transcript?: string;
+}
+
 export interface Alert {
   id: string;
   childId: string;
@@ -63,6 +82,8 @@ export interface Alert {
   isRead: boolean;
   latitude?: number;
   longitude?: number;
+  audioRecordingUrl?: string;
+  hasAudio?: boolean;
 }
 
 export type AppTheme = 'light' | 'dark';

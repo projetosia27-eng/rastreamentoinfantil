@@ -2,6 +2,7 @@ import React from 'react';
 import { Child } from '../../../domain/entities';
 import { AlertTriangle, MapPin, Clock, ArrowRight, X } from 'lucide-react';
 import { triggerEmergencyAlert } from '../../../services/onesignal';
+import EmergencyAudioPlayer from '../../alerts/components/EmergencyAudioPlayer';
 
 interface EmergencyFlowModalProps {
   child: Child;
@@ -19,7 +20,7 @@ export default function EmergencyFlowModal({ child, onClose, onOpenMap, onOpenPo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-red-100 dark:border-red-900/50">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-red-100 dark:border-red-900/50 max-h-[90vh] overflow-y-auto">
         <div className="bg-red-50 dark:bg-red-900/20 p-6 flex flex-col items-center justify-center border-b border-red-100 dark:border-red-900/50 relative">
           <button 
             onClick={onClose}
@@ -33,36 +34,27 @@ export default function EmergencyFlowModal({ child, onClose, onOpenMap, onOpenPo
           </div>
           <h2 className="text-xl font-black text-red-700 dark:text-red-400 text-center">Emergência Acionada</h2>
           <p className="text-sm text-red-600/80 dark:text-red-400/80 text-center mt-1">
-            Informações salvas. Mantenha a calma, estamos auxiliando.
+            Alerta SOS de {child.name} registrado!
           </p>
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          {/* ITEM 5: SOS AUDIO MONITORING PLAYER */}
+          <EmergencyAudioPlayer childName={child.name} timestamp={currentTime} />
+
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-100 dark:border-slate-800 flex items-center gap-3">
             <div className="p-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg">
               <Clock className="h-5 w-5" />
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase">Hora do Acionamento</p>
               <p className="text-sm font-black text-slate-800 dark:text-white">
-                {currentTime}
+                {currentTime} (Ativo)
               </p>
             </div>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800 flex items-center gap-3">
-            <div className="p-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Última Conexão do Dispositivo</p>
-              <p className="text-sm font-black text-slate-800 dark:text-white">
-                {child.lastSeen}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-100 dark:border-slate-800 flex items-center gap-3">
             <div className="p-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg shrink-0">
               <MapPin className="h-5 w-5" />
             </div>
@@ -80,7 +72,7 @@ export default function EmergencyFlowModal({ child, onClose, onOpenMap, onOpenPo
                 onClose();
                 onOpenMap();
               }}
-              className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+              className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-red-600/20"
             >
               Abrir Mapa de Rastreamento
               <ArrowRight className="h-5 w-5" />
